@@ -51,7 +51,7 @@ async function fetchRealData(): Promise<DataPoint[]> {
     const dataPoints: DataPoint[] = [];
     try {
         // Supongamos que fetch devuelve una respuesta JSON con los datos base64
-        const response = await fetch('URL_DE_LA_API');  // URL_DE_LA_API es un ejemplo de URL
+        const response = await fetch('https://ipicyt-ia-gateway-production.up.railway.app/sensores');  // URL_DE_LA_API es un ejemplo de URL
         const jsonData = await response.json();
         // Asumimos que jsonData contiene un arreglo de lecturas, cada una con un campo base64 (por ejemplo, jsonData.data o similar)
         const readings = Array.isArray(jsonData) ? jsonData : jsonData.readings || jsonData.data || [jsonData];
