@@ -21,7 +21,7 @@ export function SensorDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState<Date | null>(addDays(new Date(), -3))
   const [endDate, setEndDate] = useState<Date | null>(new Date())
-  const [usingMockData, setUsingMockData] = useState(false)
+  const [usingMockData, setUsingMockData] = useState(true)
 
   const chartsRef = useRef<HTMLDivElement>(null)
 
@@ -30,7 +30,7 @@ export function SensorDashboard() {
       setLoading(true)
       setError(null)
 
-      // Obtener datos (siempre simulados en la previsualización)
+      // Obtener datos según la configuración
       const data = await fetchSensorData()
 
       // Verificar si estamos usando datos de mock
@@ -38,7 +38,7 @@ export function SensorDashboard() {
       setUsingMockData(isMockData)
 
       if (data.length === 0) {
-        setError("No se pudieron generar datos de prueba.")
+        setError("No se pudieron obtener datos. Por favor, intente nuevamente.")
       } else {
         setSensorData(data)
 
