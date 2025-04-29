@@ -108,12 +108,72 @@ export function generateMockData(days = 3): SensorData[] {
   return mockData.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
 }
 
-// Modificar la función fetchSensorData para usar directamente datos simulados
-// en el entorno de previsualización
+// URL de la API real (reemplazar con la URL correcta)
+const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
+
+// Función para obtener datos reales de la API
+async function fetchRealData(): Promise<SensorData[]> {
+  try {
+    const response = await fetch(API_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    // Procesar los datos recibidos
+    return data
+      .map((item: any) => {
+        // Verificar si el dato tiene el campo data y procesarlo
+        const { isCO2Sensor, value } = processBase64Data(item.data || "")
+
+        // Solo incluir datos del sensor de CO₂
+        if (!isCO2Sensor) return null
+
+        const timestamp = item.timestamp
+        const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
+
+        return {
+          id: item.id || `real-${Date.now()}-${Math.random()}`,
+          timestamp,
+          data: item.data,
+          sensorId: 1,
+          decodedValue: value,
+          formattedDate,
+          formattedTime,
+          dateObj,
+        }
+      })
+      .filter(Boolean) // Eliminar elementos null
+  } catch (error) {
+    console.error("Error al obtener datos reales:", error)
+    throw error
+  }
+}
+
+// Función modificada para usar datos reales o simulados según la configuración
 export async function fetchSensorData(): Promise<SensorData[]> {
-  // En el entorno de previsualización, usar directamente datos simulados
-  console.log("Usando datos simulados para la previsualización")
-  return generateMockData(3) // 3 días de datos simulados
+  // Verificar la configuración en localStorage
+  const useMockData = localStorage.getItem("useMockData") !== "false"
+
+  if (useMockData) {
+    console.log("Usando datos simulados")
+    return generateMockData(3) // 3 días de datos simulados
+  } else {
+    try {
+      console.log("Intentando obtener datos reales")
+      return await fetchRealData()
+    } catch (error) {
+      console.error("Error al obtener datos reales, usando datos simulados como fallback:", error)
+      return generateMockData(3) // Usar datos simulados como fallback
+    }
+  }
 }
 
 // Función para calcular promedios por hora
