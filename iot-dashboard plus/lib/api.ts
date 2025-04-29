@@ -12,7 +12,7 @@ export interface SensorData {
   dateObj: Date
 }
 
-// Función para verificar si el dato es del sensor de CO₂ (primer byte = 0x01)
+// Decodificar Base64
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
     const binaryString = atob(base64String)
@@ -37,7 +37,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
   }
 }
 
-// Función para formatear la fecha y hora
+// Formatear fecha
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   return {
@@ -47,7 +47,7 @@ export function formatDateTime(dateString: string) {
   }
 }
 
-// Función para generar datos simulados realistas
+// Mock
 export function generateMockData(days = 3): SensorData[] {
   const mockData: SensorData[] = []
   const now = new Date()
@@ -73,7 +73,7 @@ export function generateMockData(days = 3): SensorData[] {
 
       const timestamp = date.toISOString()
       const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-      const mockBase64 = "AQAAAA==" // Representa [0x01, 0x00, 0x00, 0x00, 0x00] en Base64
+      const mockBase64 = "AQAAAA==" // [0x01, 0x00, 0x00, 0x00, 0x00]
 
       mockData.push({
         id: `mock-${i}-${hour}`,
@@ -91,10 +91,9 @@ export function generateMockData(days = 3): SensorData[] {
   return mockData.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
 }
 
-// URL de la API real
+// API
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
-// Función para obtener datos reales, filtrando errores
 async function fetchRealData(): Promise<SensorData[]> {
   try {
     const response = await fetch(API_URL, {
@@ -111,17 +110,17 @@ async function fetchRealData(): Promise<SensorData[]> {
     const data = await response.json()
 
     return data
-      .filter((item: any) => !item.level && item.data && item.time) // Filtrar errores y datos incompletos
+      .filter((item: any) => !item.level && item.data && item.time)
       .map((item: any) => {
         const { isCO2Sensor, value } = processBase64Data(item.data || "")
 
-        if (!isCO2Sensor) return null
+        if (!isCO2Sensor || isNaN(value)) return null
 
         const timestamp = item.time
         const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
 
         return {
-          id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
+          id: item.deduplicationId || item.id || `real-${Date.now()}-${Math.random()}`,
           timestamp,
           data: item.data,
           sensorId: 1,
@@ -132,13 +131,14 @@ async function fetchRealData(): Promise<SensorData[]> {
         }
       })
       .filter(Boolean)
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime()) // Ordenados por fecha
   } catch (error) {
     console.error("Error al obtener datos reales:", error)
     throw error
   }
 }
 
-// Función para usar datos reales o simulados
+// Fetch de sensor
 export async function fetchSensorData(): Promise<SensorData[]> {
   const useMockData = localStorage.getItem("useMockData") !== "false"
 
@@ -147,16 +147,16 @@ export async function fetchSensorData(): Promise<SensorData[]> {
     return generateMockData(3)
   } else {
     try {
-      console.log("Intentando obtener datos reales")
+      console.log("Obteniendo datos reales")
       return await fetchRealData()
     } catch (error) {
-      console.error("Error al obtener datos reales, usando simulados como fallback:", error)
+      console.error("Error real, usando mock:", error)
       return generateMockData(3)
     }
   }
 }
 
-// Función para calcular promedios por hora
+// Promedios
 export function calculateHourlyAverages(data: SensorData[]): { hour: string; average: number }[] {
   const hourlyData: Record<string, number[]> = {}
 
@@ -181,12 +181,9 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
     .sort((a, b) => a.hour.localeCompare(b.hour))
 }
 
-// Función para filtrar datos por rango de fechas
+// Filtro por fecha
 export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
   if (!startDate || !endDate) return data
 
-  return data.filter((item) => {
-    const date = item.dateObj
-    return date >= startDate && date <= endDate
-  })
+  return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
 }
