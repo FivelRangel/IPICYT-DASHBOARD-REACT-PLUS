@@ -13,7 +13,9 @@ export interface SensorData {
 }
 
 // Decodificar Base64
-export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
+type ProcessResult = { isCO2Sensor: boolean; value: number }
+
+export function processBase64Data(base64String: string): ProcessResult {
   try {
     const binaryString = atob(base64String)
     const bytes = new Uint8Array(binaryString.length)
@@ -22,9 +24,6 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
       bytes[i] = binaryString.charCodeAt(i)
     }
 
-    // Solo considerar válidos los datos que:
-    // - Tienen longitud de 5 bytes
-    // - El primer byte es 0x01 (CO₂)
     if (bytes.length !== 5 || bytes[0] !== 0x01) {
       return { isCO2Sensor: false, value: 0 }
     }
@@ -32,8 +31,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     const dataView = new DataView(bytes.buffer)
     const value = dataView.getFloat32(1, false) // Big Endian
 
-    // Extra chequeo: valor dentro de rango razonable de CO₂ (ppm)
-    if (!Number.isFinite(value) || value < 200 || value > 5000) {
+    if (!Number.isFinite(value) || value < 0 || value > 5000) {
       return { isCO2Sensor: false, value: 0 }
     }
 
@@ -43,7 +41,6 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     return { isCO2Sensor: false, value: 0 }
   }
 }
-
 
 // Formatear fecha
 export function formatDateTime(dateString: string) {
@@ -68,11 +65,8 @@ export function generateMockData(days = 3): SensorData[] {
       date.setHours(hour, Math.floor(Math.random() * 60), 0, 0)
 
       let baseValue = 500
-      if (hour >= 9 && hour <= 18) {
-        baseValue = 700
-      } else if (hour >= 18) {
-        baseValue = 900
-      }
+      if (hour >= 9 && hour <= 18) baseValue = 700
+      else if (hour >= 18) baseValue = 900
 
       const randomVariation = Math.random() * 200 - 100
       const value = baseValue + randomVariation
@@ -81,7 +75,7 @@ export function generateMockData(days = 3): SensorData[] {
 
       const timestamp = date.toISOString()
       const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-      const mockBase64 = "AQAAAA==" // [0x01, 0x00, 0x00, 0x00, 0x00]
+      const mockBase64 = "AQAAAA=="
 
       mockData.push({
         id: `mock-${i}-${hour}`,
@@ -99,7 +93,6 @@ export function generateMockData(days = 3): SensorData[] {
   return mockData.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
 }
 
-// API
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
 async function fetchRealData(): Promise<SensorData[]> {
@@ -111,9 +104,7 @@ async function fetchRealData(): Promise<SensorData[]> {
       },
     })
 
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`)
-    }
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
 
     const data = await response.json()
 
@@ -139,14 +130,13 @@ async function fetchRealData(): Promise<SensorData[]> {
         }
       })
       .filter(Boolean)
-      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime()) // Ordenados por fecha
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
   } catch (error) {
     console.error("Error al obtener datos reales:", error)
     throw error
   }
 }
 
-// Fetch de sensor
 export async function fetchSensorData(): Promise<SensorData[]> {
   const useMockData = localStorage.getItem("useMockData") !== "false"
 
@@ -164,15 +154,12 @@ export async function fetchSensorData(): Promise<SensorData[]> {
   }
 }
 
-// Promedios
 export function calculateHourlyAverages(data: SensorData[]): { hour: string; average: number }[] {
   const hourlyData: Record<string, number[]> = {}
 
   data.forEach((item) => {
     const hour = format(item.dateObj, "yyyy-MM-dd HH:00")
-    if (!hourlyData[hour]) {
-      hourlyData[hour] = []
-    }
+    if (!hourlyData[hour]) hourlyData[hour] = []
     hourlyData[hour].push(item.decodedValue)
   })
 
@@ -180,7 +167,6 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
     .map(([hour, values]) => {
       const sum = values.reduce((acc, val) => acc + val, 0)
       const average = sum / values.length
-
       return {
         hour: format(new Date(hour), "dd/MM HH:00"),
         average: Number.parseFloat(average.toFixed(2)),
@@ -189,9 +175,7 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
     .sort((a, b) => a.hour.localeCompare(b.hour))
 }
 
-// Filtro por fecha
 export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
   if (!startDate || !endDate) return data
-
   return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
 }
