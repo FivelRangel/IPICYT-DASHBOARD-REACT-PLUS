@@ -21,7 +21,7 @@ export function SensorDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState<Date | null>(addDays(new Date(), -3))
   const [endDate, setEndDate] = useState<Date | null>(new Date())
-  const [usingMockData, setUsingMockData] = useState(true)
+  const [usingMockData, setUsingMockData] = useState(false)
 
   const chartsRef = useRef<HTMLDivElement>(null)
 
