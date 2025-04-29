@@ -22,20 +22,28 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
       bytes[i] = binaryString.charCodeAt(i)
     }
 
-    const isCO2Sensor = bytes[0] === 0x01
-    let value = 0
-
-    if (isCO2Sensor && bytes.length >= 5) {
-      const dataView = new DataView(bytes.buffer)
-      value = dataView.getFloat32(1, false) // Big Endian
+    // Solo considerar válidos los datos que:
+    // - Tienen longitud de 5 bytes
+    // - El primer byte es 0x01 (CO₂)
+    if (bytes.length !== 5 || bytes[0] !== 0x01) {
+      return { isCO2Sensor: false, value: 0 }
     }
 
-    return { isCO2Sensor, value }
+    const dataView = new DataView(bytes.buffer)
+    const value = dataView.getFloat32(1, false) // Big Endian
+
+    // Extra chequeo: valor dentro de rango razonable de CO₂ (ppm)
+    if (!Number.isFinite(value) || value < 200 || value > 5000) {
+      return { isCO2Sensor: false, value: 0 }
+    }
+
+    return { isCO2Sensor: true, value }
   } catch (error) {
     console.error("Error procesando datos Base64:", error)
     return { isCO2Sensor: false, value: 0 }
   }
 }
+
 
 // Formatear fecha
 export function formatDateTime(dateString: string) {
