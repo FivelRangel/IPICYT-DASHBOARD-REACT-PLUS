@@ -4,13 +4,13 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Dashboard } from "@/components/dashboard"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
   title: "Dashboard IoT CO₂",
   description: "Dashboard para visualizar mediciones de CO₂",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -24,6 +24,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <SidebarProvider>
             <Dashboard>{children}</Dashboard>
+            <Toaster />
           </SidebarProvider>
         </ThemeProvider>
       </body>
