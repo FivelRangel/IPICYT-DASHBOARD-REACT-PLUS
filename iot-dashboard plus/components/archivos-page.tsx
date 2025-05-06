@@ -3,23 +3,15 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import {
-  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Tabs, TabsContent, TabsList, TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, File, Trash2, Eye } from "lucide-react"
-import {
-  Alert, AlertDescription, AlertTitle,
-} from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface PDFFile {
   id: string
@@ -58,8 +50,13 @@ export function ArchivosPage() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       if (file.type === "application/pdf") {
+        // Crear URL para el archivo
         const url = URL.createObjectURL(file)
+
+        // Formatear tamaño
         const sizeInMB = (file.size / (1024 * 1024)).toFixed(2)
+
+        // Formatear fecha
         const today = new Date()
         const date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`
 
@@ -74,12 +71,18 @@ export function ArchivosPage() {
     }
 
     setPdfFiles([...pdfFiles, ...newFiles])
-    if (fileInputRef.current) fileInputRef.current.value = ""
+
+    // Limpiar input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
   const handleDeleteFile = (id: string) => {
     setPdfFiles(pdfFiles.filter((file) => file.id !== id))
-    if (selectedPdf?.id === id) setSelectedPdf(null)
+    if (selectedPdf && selectedPdf.id === id) {
+      setSelectedPdf(null)
+    }
   }
 
   const handleViewFile = (file: PDFFile) => {
@@ -87,14 +90,14 @@ export function ArchivosPage() {
   }
 
   return (
-    <div className="flex flex-col p-4 sm:p-6 gap-6 w-full max-w-7xl mx-auto">
+    <div className="flex flex-col p-6 gap-6 w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Archivos PDF</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Archivos PDF</h1>
         <p className="text-muted-foreground">Almacenamiento y visualización de reportes PDF</p>
       </div>
 
       <Tabs defaultValue="files" className="w-full">
-        <TabsList className="flex flex-col sm:grid w-full sm:w-[400px] grid-cols-2 gap-2">
+        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
           <TabsTrigger value="files">Archivos</TabsTrigger>
           <TabsTrigger value="viewer">Visor PDF</TabsTrigger>
         </TabsList>
@@ -106,18 +109,22 @@ export function ArchivosPage() {
               <CardDescription>Sube archivos PDF para almacenarlos y visualizarlos posteriormente</CardDescription>
             </CardHeader>
             <CardContent>
-              <Input
-                id="pdf-upload"
-                type="file"
-                ref={fileInputRef}
-                accept="application/pdf"
-                onChange={handleFileUpload}
-                multiple
-                className="hidden"
-              />
+              <div className="grid w-full items-center gap-4">
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="pdf-upload">Archivo PDF</Label>
+                  <Input
+                    id="pdf-upload"
+                    type="file"
+                    ref={fileInputRef}
+                    accept="application/pdf"
+                    onChange={handleFileUpload}
+                    multiple
+                  />
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">
+              <Button onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" />
                 Subir archivo
               </Button>
@@ -138,56 +145,50 @@ export function ArchivosPage() {
               ) : (
                 <ScrollArea className="h-[300px] w-full rounded-md border">
                   <div className="p-4">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-[600px] w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left pb-2">Nombre</th>
-                            <th className="text-left pb-2">Tamaño</th>
-                            <th className="text-left pb-2">Fecha</th>
-                            <th className="text-right pb-2">Acciones</th>
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left pb-2">Nombre</th>
+                          <th className="text-left pb-2">Tamaño</th>
+                          <th className="text-left pb-2">Fecha</th>
+                          <th className="text-right pb-2">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pdfFiles.map((file) => (
+                          <tr key={file.id} className="border-b">
+                            <td className="py-2 flex items-center">
+                              <File className="mr-2 h-4 w-4" />
+                              {file.name}
+                            </td>
+                            <td className="py-2">{file.size}</td>
+                            <td className="py-2">{file.date}</td>
+                            <td className="py-2 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" onClick={() => handleViewFile(file)}>
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl h-[80vh]">
+                                    <DialogHeader>
+                                      <DialogTitle>{file.name}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="w-full h-full">
+                                      <iframe src={file.url} className="w-full h-[calc(80vh-80px)]" title={file.name} />
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <Button variant="destructive" size="sm" onClick={() => handleDeleteFile(file.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {pdfFiles.map((file) => (
-                            <tr key={file.id} className="border-b">
-                              <td className="py-2 flex items-center">
-                                <File className="mr-2 h-4 w-4" />
-                                {file.name}
-                              </td>
-                              <td className="py-2">{file.size}</td>
-                              <td className="py-2">{file.date}</td>
-                              <td className="py-2 text-right">
-                                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:items-center">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => handleViewFile(file)}>
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-4xl h-[80vh]">
-                                      <DialogHeader>
-                                        <DialogTitle>{file.name}</DialogTitle>
-                                      </DialogHeader>
-                                      <div className="w-full h-full">
-                                        <iframe
-                                          src={file.url}
-                                          className="w-full h-[calc(80vh-80px)]"
-                                          title={file.name}
-                                        />
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                  <Button variant="destructive" size="sm" onClick={() => handleDeleteFile(file.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </ScrollArea>
               )}
@@ -204,7 +205,7 @@ export function ArchivosPage() {
             <CardContent>
               {selectedPdf ? (
                 <div className="w-full h-[70vh] border rounded-md overflow-hidden">
-                  <iframe src={selectedPdf.url} className="w-full h-[60vh] sm:h-[70vh]" title={selectedPdf.name} />
+                  <iframe src={selectedPdf.url} className="w-full h-full" title={selectedPdf.name} />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] border rounded-md">
