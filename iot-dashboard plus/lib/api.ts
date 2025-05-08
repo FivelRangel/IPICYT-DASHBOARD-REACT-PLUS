@@ -43,6 +43,9 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
 // Formatea fecha y hora
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
+  if (isNaN(date.getTime())) {
+    console.warn("Fecha inválida:", dateString)
+  }
   return {
     formattedDate: format(date, "dd 'de' MMMM, yyyy", { locale: es }),
     formattedTime: format(date, "HH:mm:ss"),
@@ -108,33 +111,49 @@ async function fetchRealData(): Promise<SensorData[]> {
     }
 
     const rawData = await response.json()
+    console.log("Total registros recibidos:", rawData.length)
 
     const validEntries = rawData
-      .filter((item: any) => item.data && item.time) // Solo entradas válidas
+      .filter((item: any) => {
+        const isValid = item.data && item.time
+        if (!isValid) {
+          console.warn("Descartado por falta de data o time:", item)
+        }
+        return isValid
+      })
       .map((item: any) => {
         const { isCO2Sensor, value } = processBase64Data(item.data)
-        if (!isCO2Sensor) return null
+        if (!isCO2Sensor) {
+          console.warn("Descartado: no es sensor de CO₂:", item.data)
+          return null
+        }
 
         let timestamp = item.time
         if (timestamp.includes(".")) {
-          timestamp = timestamp.replace(/\.(\d{3})\d+/, ".$1") // Limita decimales
+          timestamp = timestamp.replace(/\.(\d{3})\d+/, ".$1")
         }
 
-        const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
+        try {
+          const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
 
-        return {
-          id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
-          timestamp,
-          data: item.data,
-          sensorId: 1,
-          decodedValue: value,
-          formattedDate,
-          formattedTime,
-          dateObj,
+          return {
+            id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
+            timestamp,
+            data: item.data,
+            sensorId: 1,
+            decodedValue: value,
+            formattedDate,
+            formattedTime,
+            dateObj,
+          }
+        } catch (err) {
+          console.error("Error al formatear fecha:", timestamp, err)
+          return null
         }
       })
       .filter(Boolean)
 
+    console.log("Total datos válidos de CO₂:", validEntries.length)
     return validEntries
   } catch (error) {
     console.error("Error al obtener datos reales:", error)
@@ -158,7 +177,7 @@ export async function fetchSensorData(): Promise<SensorData[]> {
       }
       return realData
     } catch (error) {
-      console.error("Error al obtener datos reales, usando datos simulados como fallback:", error)
+      console.error("Fallo al obtener datos reales. Usando simulados:", error)
       return generateMockData(3)
     }
   }
@@ -179,15 +198,4 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
       const sum = values.reduce((acc, val) => acc + val, 0)
       const average = sum / values.length
       return {
-        hour: format(new Date(hour), "dd/MM HH:00"),
-        average: Number.parseFloat(average.toFixed(2)),
-      }
-    })
-    .sort((a, b) => a.hour.localeCompare(b.hour))
-}
-
-// Filtra datos por fechas
-export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
-  if (!startDate || !endDate) return data
-  return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
-}
+        hour: format(new Date(hour), "dd/MM HH:00
