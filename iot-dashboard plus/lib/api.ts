@@ -73,7 +73,7 @@ export function generateMockData(days = 3): SensorData[] {
 
       const timestamp = date.toISOString()
       const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-      const mockBase64 = "AQAAAA=="
+      const mockBase64 = "AQAAAA==" // 0x01 + 0x00*4
 
       mockData.push({
         id: `mock-${i}-${hour}`,
@@ -93,7 +93,7 @@ export function generateMockData(days = 3): SensorData[] {
 
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
-// Obtiene datos reales y filtra válidos
+// Obtiene datos reales y filtra válidos CO₂
 async function fetchRealData(): Promise<SensorData[]> {
   try {
     const response = await fetch(API_URL, {
@@ -107,18 +107,17 @@ async function fetchRealData(): Promise<SensorData[]> {
       throw new Error(`Error HTTP: ${response.status}`)
     }
 
-    const data = await response.json()
+    const rawData = await response.json()
 
-    return data
+    const validEntries = rawData
       .filter((item: any) => item.data && item.time) // Solo entradas válidas
       .map((item: any) => {
         const { isCO2Sensor, value } = processBase64Data(item.data)
         if (!isCO2Sensor) return null
 
-        // Corrige timestamps con nanosegundos que rompen Date
         let timestamp = item.time
         if (timestamp.includes(".")) {
-          timestamp = timestamp.replace(/\.(\d{3})\d+/, ".$1") // Solo 3 decimales para evitar error de "Invalid time value"
+          timestamp = timestamp.replace(/\.(\d{3})\d+/, ".$1") // Limita decimales
         }
 
         const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
@@ -134,7 +133,9 @@ async function fetchRealData(): Promise<SensorData[]> {
           dateObj,
         }
       })
-      .filter(Boolean) // Quitar nulls
+      .filter(Boolean)
+
+    return validEntries
   } catch (error) {
     console.error("Error al obtener datos reales:", error)
     throw error
@@ -151,7 +152,11 @@ export async function fetchSensorData(): Promise<SensorData[]> {
   } else {
     try {
       console.log("Intentando obtener datos reales")
-      return await fetchRealData()
+      const realData = await fetchRealData()
+      if (realData.length === 0) {
+        throw new Error("No hay datos válidos de CO₂")
+      }
+      return realData
     } catch (error) {
       console.error("Error al obtener datos reales, usando datos simulados como fallback:", error)
       return generateMockData(3)
