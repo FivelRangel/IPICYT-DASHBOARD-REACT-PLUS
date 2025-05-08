@@ -198,4 +198,15 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
       const sum = values.reduce((acc, val) => acc + val, 0)
       const average = sum / values.length
       return {
-        hour: format(new Date(hour), "dd/MM HH:00
+        hour: format(new Date(hour), "dd/MM HH:00"),
+        average: Number.parseFloat(average.toFixed(2)),
+      }
+    })
+    .sort((a, b) => a.hour.localeCompare(b.hour))
+}
+
+// Filtra datos por fechas
+export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
+  if (!startDate || !endDate) return data
+  return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
+}
