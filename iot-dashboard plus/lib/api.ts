@@ -12,7 +12,7 @@ export interface SensorData {
   dateObj: Date
 }
 
-// Función actualizada con lógica Little Endian
+// Función actualizada con impresión de valores
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
     const binaryString = atob(base64String)
@@ -28,6 +28,11 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     const value = dataView.getFloat32(0, true) // Little Endian
 
     const isCO2Sensor = sensorId === 0x01
+
+    if (isCO2Sensor) {
+      console.log(`Valor original (base64): ${base64String} → valor procesado: ${value.toFixed(2)}`)
+    }
+
     return { isCO2Sensor, value: Math.round(value * 100) / 100 }
   } catch (error) {
     console.error("Error procesando datos Base64:", error)
@@ -35,7 +40,6 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
   }
 }
 
-// Función para formatear la fecha y hora
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   return {
@@ -45,7 +49,6 @@ export function formatDateTime(dateString: string) {
   }
 }
 
-// Función para generar datos de prueba realistas - OPTIMIZADA
 export function generateMockData(days = 3): SensorData[] {
   const mockData: SensorData[] = []
   const now = new Date()
@@ -58,11 +61,8 @@ export function generateMockData(days = 3): SensorData[] {
       date.setHours(hour, Math.floor(Math.random() * 60), 0, 0)
 
       let baseValue = 500
-      if (hour >= 9 && hour <= 18) {
-        baseValue = 700
-      } else if (hour >= 18) {
-        baseValue = 900
-      }
+      if (hour >= 9 && hour <= 18) baseValue = 700
+      else if (hour >= 18) baseValue = 900
 
       const randomVariation = Math.random() * 200 - 100
       const value = baseValue + randomVariation
@@ -72,8 +72,7 @@ export function generateMockData(days = 3): SensorData[] {
       const timestamp = date.toISOString()
       const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
 
-      // Simula [0x01, 0x00, 0x00, 0x00, 0x00] = 0.0 en Float32 LE
-      const mockBase64 = "AQAAAA=="
+      const mockBase64 = "AQAAAA==" // Simula [0x01, 0x00, 0x00, 0x00, 0x00]
 
       mockData.push({
         id: `mock-${i}-${hour}`,
