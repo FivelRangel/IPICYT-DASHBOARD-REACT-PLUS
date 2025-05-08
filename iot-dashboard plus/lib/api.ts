@@ -12,7 +12,7 @@ export interface SensorData {
   dateObj: Date
 }
 
-// Función actualizada con impresión de valores
+// Función corregida para interpretar correctamente el valor Float32
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
     const binaryString = atob(base64String)
@@ -22,18 +22,22 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
       bytes[i] = binaryString.charCodeAt(i)
     }
 
-    const sensorId = bytes[0]
-    const valueBytes = bytes.slice(1, 5)
-    const dataView = new DataView(valueBytes.buffer)
-    const value = dataView.getFloat32(0, true) // Little Endian
-
-    const isCO2Sensor = sensorId === 0x01
-
-    if (isCO2Sensor) {
-      console.log(`Valor original (base64): ${base64String} → valor procesado: ${value.toFixed(2)}`)
+    if (bytes.length < 5) {
+      throw new Error("Datos insuficientes para procesar Float32.")
     }
 
-    return { isCO2Sensor, value: Math.round(value * 100) / 100 }
+    const sensorId = bytes[0]
+    const isCO2Sensor = sensorId === 0x01
+
+    const floatBytes = bytes.slice(1, 5)
+    const dataView = new DataView(floatBytes.buffer, floatBytes.byteOffset, floatBytes.byteLength)
+    const value = dataView.getFloat32(0, true) // Little Endian
+
+    if (isCO2Sensor) {
+      console.log(`Base64: ${base64String} → Decodificado: ${value}`)
+    }
+
+    return { isCO2Sensor, value: Math.round(value * 1000000) / 1000000 }
   } catch (error) {
     console.error("Error procesando datos Base64:", error)
     return { isCO2Sensor: false, value: 0 }
