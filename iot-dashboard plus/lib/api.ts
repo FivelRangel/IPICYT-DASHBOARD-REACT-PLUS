@@ -12,8 +12,7 @@ export interface SensorData {
   dateObj: Date
 }
 
-// Función para verificar si el dato es del sensor de CO₂ (primer byte = 0x01)
-// y decodificar el valor Float32 Big Endian
+// Decodifica solo sensores de CO₂ (0x01)
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
     const binaryString = atob(base64String)
@@ -24,17 +23,15 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     }
 
     const isCO2Sensor = bytes[0] === 0x01
-
     let value = 0
+
     if (isCO2Sensor && bytes.length >= 5) {
       const floatBytes = bytes.slice(1, 5)
       const dataView = new DataView(floatBytes.buffer)
       value = dataView.getFloat32(0, false) // Big Endian
     }
 
-    if (!Number.isFinite(value)) {
-      value = 0
-    }
+    if (!Number.isFinite(value)) value = 0
 
     return { isCO2Sensor, value: Number.parseFloat(value.toFixed(2)) }
   } catch (error) {
@@ -43,7 +40,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
   }
 }
 
-// Función para formatear la fecha y hora
+// Formatea fecha y hora
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   return {
@@ -53,7 +50,7 @@ export function formatDateTime(dateString: string) {
   }
 }
 
-// Función para generar datos de prueba realistas - OPTIMIZADA
+// Genera datos simulados
 export function generateMockData(days = 3): SensorData[] {
   const mockData: SensorData[] = []
   const now = new Date()
@@ -66,11 +63,8 @@ export function generateMockData(days = 3): SensorData[] {
       date.setHours(hour, Math.floor(Math.random() * 60), 0, 0)
 
       let baseValue = 500
-      if (hour >= 9 && hour <= 18) {
-        baseValue = 700
-      } else if (hour >= 18) {
-        baseValue = 900
-      }
+      if (hour >= 9 && hour <= 18) baseValue = 700
+      else if (hour >= 18) baseValue = 900
 
       const randomVariation = Math.random() * 200 - 100
       const value = baseValue + randomVariation
@@ -79,7 +73,7 @@ export function generateMockData(days = 3): SensorData[] {
 
       const timestamp = date.toISOString()
       const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-      const mockBase64 = "AQAAAA==" // Simula [0x01, 0x00, 0x00, 0x00, 0x00]
+      const mockBase64 = "AQAAAA=="
 
       mockData.push({
         id: `mock-${i}-${hour}`,
@@ -99,6 +93,7 @@ export function generateMockData(days = 3): SensorData[] {
 
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
+// Obtiene datos reales y filtra válidos
 async function fetchRealData(): Promise<SensorData[]> {
   try {
     const response = await fetch(API_URL, {
@@ -115,15 +110,21 @@ async function fetchRealData(): Promise<SensorData[]> {
     const data = await response.json()
 
     return data
+      .filter((item: any) => item.data && item.time) // Solo entradas válidas
       .map((item: any) => {
-        const { isCO2Sensor, value } = processBase64Data(item.data || "")
+        const { isCO2Sensor, value } = processBase64Data(item.data)
         if (!isCO2Sensor) return null
 
-        const timestamp = item.timestamp
+        // Corrige timestamps con nanosegundos que rompen Date
+        let timestamp = item.time
+        if (timestamp.includes(".")) {
+          timestamp = timestamp.replace(/\.(\d{3})\d+/, ".$1") // Solo 3 decimales para evitar error de "Invalid time value"
+        }
+
         const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
 
         return {
-          id: item.id || `real-${Date.now()}-${Math.random()}`,
+          id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
           timestamp,
           data: item.data,
           sensorId: 1,
@@ -133,13 +134,14 @@ async function fetchRealData(): Promise<SensorData[]> {
           dateObj,
         }
       })
-      .filter(Boolean)
+      .filter(Boolean) // Quitar nulls
   } catch (error) {
     console.error("Error al obtener datos reales:", error)
     throw error
   }
 }
 
+// Usa datos reales o simulados según localStorage
 export async function fetchSensorData(): Promise<SensorData[]> {
   const useMockData = localStorage.getItem("useMockData") !== "false"
 
@@ -157,14 +159,13 @@ export async function fetchSensorData(): Promise<SensorData[]> {
   }
 }
 
+// Calcula promedios por hora
 export function calculateHourlyAverages(data: SensorData[]): { hour: string; average: number }[] {
   const hourlyData: Record<string, number[]> = {}
 
   data.forEach((item) => {
     const hour = format(item.dateObj, "yyyy-MM-dd HH:00")
-    if (!hourlyData[hour]) {
-      hourlyData[hour] = []
-    }
+    if (!hourlyData[hour]) hourlyData[hour] = []
     hourlyData[hour].push(item.decodedValue)
   })
 
@@ -180,11 +181,8 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
     .sort((a, b) => a.hour.localeCompare(b.hour))
 }
 
+// Filtra datos por fechas
 export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
   if (!startDate || !endDate) return data
-
-  return data.filter((item) => {
-    const date = item.dateObj
-    return date >= startDate && date <= endDate
-  })
+  return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
 }
