@@ -15,6 +15,7 @@ export interface SensorData {
 // Decodifica solo sensores de CO₂ (0x01)
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
+    console.log("Decodificando base64:", base64String)
     const binaryString = atob(base64String)
     const bytes = new Uint8Array(binaryString.length)
 
@@ -22,20 +23,33 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
       bytes[i] = binaryString.charCodeAt(i)
     }
 
+    console.log("Bytes decodificados:", [...bytes])
+
     const isCO2Sensor = bytes[0] === 0x01
     let value = 0
 
     if (isCO2Sensor && bytes.length >= 5) {
       const floatBytes = bytes.slice(1, 5)
+      console.log("Bytes a convertir a Float32:", [...floatBytes])
       const dataView = new DataView(floatBytes.buffer)
       value = dataView.getFloat32(0, false) // Big Endian
+
+      console.log("Valor Float32 bruto:", value)
+
+      if (!Number.isFinite(value) || value < 0 || value > 10000) {
+        console.warn("⚠️ Valor fuera de rango o inválido:", value)
+        value = 0
+      }
+    } else {
+      if (!isCO2Sensor) console.warn("⚠️ No es sensor CO₂ (bytes[0] != 0x01)")
+      if (bytes.length < 5) console.warn("⚠️ Datos insuficientes (menos de 5 bytes)")
     }
 
-    if (!Number.isFinite(value)) value = 0
-
-    return { isCO2Sensor, value: Number.parseFloat(value.toFixed(2)) }
+    const final = Number.parseFloat(value.toFixed(2))
+    console.log("Valor final redondeado:", final)
+    return { isCO2Sensor, value: final }
   } catch (error) {
-    console.error("Error procesando datos Base64:", error)
+    console.error("❌ Error procesando datos Base64:", error)
     return { isCO2Sensor: false, value: 0 }
   }
 }
@@ -44,7 +58,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   if (isNaN(date.getTime())) {
-    console.warn("Fecha inválida:", dateString)
+    console.warn("⚠️ Fecha inválida:", dateString)
   }
   return {
     formattedDate: format(date, "dd 'de' MMMM, yyyy", { locale: es }),
@@ -111,20 +125,21 @@ async function fetchRealData(): Promise<SensorData[]> {
     }
 
     const rawData = await response.json()
-    console.log("Total registros recibidos:", rawData.length)
+    console.log("📥 Total registros recibidos:", rawData.length)
 
     const validEntries = rawData
       .filter((item: any) => {
         const isValid = item.data && item.time
         if (!isValid) {
-          console.warn("Descartado por falta de data o time:", item)
+          console.warn("❌ Descartado por falta de 'data' o 'time':", item)
         }
         return isValid
       })
-      .map((item: any) => {
+      .map((item: any, index: number) => {
+        console.log(`\n📦 Procesando entrada #${index + 1}`, item)
         const { isCO2Sensor, value } = processBase64Data(item.data)
         if (!isCO2Sensor) {
-          console.warn("Descartado: no es sensor de CO₂:", item.data)
+          console.warn("⛔ Descartado: no es sensor de CO₂:", item.data)
           return null
         }
 
@@ -135,8 +150,7 @@ async function fetchRealData(): Promise<SensorData[]> {
 
         try {
           const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-
-          return {
+          const finalItem: SensorData = {
             id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
             timestamp,
             data: item.data,
@@ -146,17 +160,19 @@ async function fetchRealData(): Promise<SensorData[]> {
             formattedTime,
             dateObj,
           }
+          console.log("✅ Entrada válida:", finalItem)
+          return finalItem
         } catch (err) {
-          console.error("Error al formatear fecha:", timestamp, err)
+          console.error("❌ Error al formatear fecha:", timestamp, err)
           return null
         }
       })
       .filter(Boolean)
 
-    console.log("Total datos válidos de CO₂:", validEntries.length)
+    console.log("✅ Total datos válidos de CO₂:", validEntries.length)
     return validEntries
   } catch (error) {
-    console.error("Error al obtener datos reales:", error)
+    console.error("❌ Error al obtener datos reales:", error)
     throw error
   }
 }
@@ -164,20 +180,21 @@ async function fetchRealData(): Promise<SensorData[]> {
 // Usa datos reales o simulados según localStorage
 export async function fetchSensorData(): Promise<SensorData[]> {
   const useMockData = localStorage.getItem("useMockData") !== "false"
+  console.log("🔧 Configuración: useMockData =", useMockData)
 
   if (useMockData) {
-    console.log("Usando datos simulados")
+    console.log("🧪 Usando datos simulados")
     return generateMockData(3)
   } else {
     try {
-      console.log("Intentando obtener datos reales")
+      console.log("🌐 Intentando obtener datos reales")
       const realData = await fetchRealData()
       if (realData.length === 0) {
         throw new Error("No hay datos válidos de CO₂")
       }
       return realData
     } catch (error) {
-      console.error("Fallo al obtener datos reales. Usando simulados:", error)
+      console.error("⚠️ Fallo al obtener datos reales. Usando simulados:", error)
       return generateMockData(3)
     }
   }
@@ -193,7 +210,7 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
     hourlyData[hour].push(item.decodedValue)
   })
 
-  return Object.entries(hourlyData)
+  const result = Object.entries(hourlyData)
     .map(([hour, values]) => {
       const sum = values.reduce((acc, val) => acc + val, 0)
       const average = sum / values.length
@@ -203,10 +220,16 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
       }
     })
     .sort((a, b) => a.hour.localeCompare(b.hour))
+
+  console.log("📊 Promedios horarios:", result)
+  return result
 }
 
 // Filtra datos por fechas
 export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
+  console.log("📅 Filtrando entre fechas:", startDate, "->", endDate)
   if (!startDate || !endDate) return data
-  return data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
+  const filtered = data.filter((item) => item.dateObj >= startDate && item.dateObj <= endDate)
+  console.log(`📦 Resultados después del filtro: ${filtered.length}/${data.length}`)
+  return filtered
 }
