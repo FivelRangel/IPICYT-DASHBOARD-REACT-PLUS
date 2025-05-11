@@ -75,15 +75,17 @@ const [startDate, setStartDate] = useState<Date | null>(null)
   }, []) // Dependencias vacías para ejecutar solo al montar
 
   // Efecto separado para manejar cambios en fechas o datos
-  useEffect(() => {
-    if (sensorData.length > 0) {
-      const filtered = filterDataByDateRange(sensorData, startDate, endDate)
-      setFilteredData(filtered)
+useEffect(() => {
+  if (sensorData.length > 0) {
+    const filtered = filterDataByDateRange(sensorData, startDate, endDate)
+    const sorted = [...filtered].sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+    setFilteredData(sorted)
 
-      const averages = calculateHourlyAverages(filtered)
-      setHourlyAverages(averages)
-    }
-  }, [startDate, endDate, sensorData])
+    const averages = calculateHourlyAverages(sorted)
+    setHourlyAverages(averages)
+  }
+}, [startDate, endDate, sensorData])
+
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setStartDate(start)
