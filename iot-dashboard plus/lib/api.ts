@@ -177,6 +177,17 @@ export async function fetchRealData(): Promise<SensorData[]> {
       .filter(Boolean)
 
     console.log("✅ Total datos válidos de CO₂:", validEntries.length)
+
+// 🔍 Mostrar lista detallada de datos válidos
+console.log("📄 Lista completa de datos válidos de CO₂:")
+validEntries.forEach((entry, index) => {
+  console.log(
+    `${index + 1}. Fecha: ${entry.formattedDate} | Hora: ${entry.formattedTime} | Valor CO₂: ${entry.decodedValue} ppm | ID: ${entry.id}`
+  )
+})
+
+
+    
     return validEntries
   } catch (error) {
     console.error("❌ Error al obtener datos reales:", error)
