@@ -108,7 +108,9 @@ export function generateMockData(days = 3): SensorData[] {
   return mockData.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
 }
 
-const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
+//const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
+const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/todos"
+
 
 export async function fetchRealData(): Promise<SensorData[]> {
   try {
