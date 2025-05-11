@@ -12,7 +12,6 @@ export interface SensorData {
   dateObj: Date
 }
 
-// ✅ Decodifica correctamente sensores de CO₂ (0x01)
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
     console.log("🔍 Decodificando base64:", base64String)
@@ -22,6 +21,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
       bytes[i] = binaryString.charCodeAt(i)
     }
     console.log("🧱 Bytes decodificados:", [...bytes])
+    console.log("🧱 Bytes HEX:", [...bytes].map(b => b.toString(16).padStart(2, "0")))
 
     const isCO2Sensor = bytes[0] === 0x01
     if (!isCO2Sensor) {
@@ -35,25 +35,20 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     }
 
     const floatBytes = bytes.slice(1, 5)
-    console.log("🔢 Bytes a convertir a Float32:", [...floatBytes])
-
-    // ✅ Alineación de buffer para lectura segura
     const buffer = new ArrayBuffer(4)
-    const view = new Uint8Array(buffer)
-    view.set(floatBytes)
-
+    new Uint8Array(buffer).set(floatBytes)
     const dataView = new DataView(buffer)
-    value = dataView.getFloat32(0, true)
+    let value = dataView.getFloat32(0, true) // ✅ Little Endian
+
     console.log("📈 Valor Float32 bruto:", value)
 
-    // Validación de rango
-    if (!Number.isFinite(value) || value < 0 || value > 10000) {
+    if (!Number.isFinite(value) || Math.abs(value) > 10000) {
       console.warn("❌ Valor fuera de rango o inválido:", value)
       value = 0
     }
 
     const final = Number.parseFloat(value.toFixed(2))
-    console.log("✅ Valor final redondeado:", final)
+    console.log("🎯 Valor CO₂ redondeado:", final, "ppm")
     return { isCO2Sensor: true, value: final }
   } catch (error) {
     console.error("❌ Error procesando datos Base64:", error)
@@ -61,7 +56,6 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
   }
 }
 
-// Formatea fecha y hora
 export function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   if (isNaN(date.getTime())) {
@@ -74,7 +68,6 @@ export function formatDateTime(dateString: string) {
   }
 }
 
-// Genera datos simulados
 export function generateMockData(days = 3): SensorData[] {
   const mockData: SensorData[] = []
   const now = new Date()
@@ -117,14 +110,11 @@ export function generateMockData(days = 3): SensorData[] {
 
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
-// Obtiene datos reales y filtra válidos CO₂
 export async function fetchRealData(): Promise<SensorData[]> {
   try {
     const response = await fetch(API_URL, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     })
 
     if (!response.ok) {
@@ -135,20 +125,11 @@ export async function fetchRealData(): Promise<SensorData[]> {
     console.log("📥 Total registros recibidos:", rawData.length)
 
     const validEntries = rawData
-      .filter((item: any) => {
-        const isValid = item.data && item.time
-        if (!isValid) {
-          console.warn("❌ Descartado por falta de 'data' o 'time':", item)
-        }
-        return isValid
-      })
+      .filter((item: any) => item.data && item.time)
       .map((item: any, index: number) => {
-        console.log(`\n📦 Procesando entrada #${index + 1}`, item)
+        console.log(`\n📦 Procesando entrada #${index + 1}`)
         const { isCO2Sensor, value } = processBase64Data(item.data)
-        if (!isCO2Sensor) {
-          console.warn("⛔ Descartado: no es sensor de CO₂:", item.data)
-          return null
-        }
+        if (!isCO2Sensor) return null
 
         let timestamp = item.time
         if (timestamp.includes(".")) {
@@ -157,7 +138,7 @@ export async function fetchRealData(): Promise<SensorData[]> {
 
         try {
           const { formattedDate, formattedTime, dateObj } = formatDateTime(timestamp)
-          const finalItem: SensorData = {
+          const entry: SensorData = {
             id: item.deduplicationId || `real-${Date.now()}-${Math.random()}`,
             timestamp,
             data: item.data,
@@ -167,8 +148,8 @@ export async function fetchRealData(): Promise<SensorData[]> {
             formattedTime,
             dateObj,
           }
-          console.log("✅ Entrada válida:", finalItem)
-          return finalItem
+          console.log("✅ Entrada válida:", entry)
+          return entry
         } catch (err) {
           console.error("❌ Error al formatear fecha:", timestamp, err)
           return null
@@ -178,35 +159,28 @@ export async function fetchRealData(): Promise<SensorData[]> {
 
     console.log("✅ Total datos válidos de CO₂:", validEntries.length)
 
-console.log("📄 === LISTA DETALLADA DE DATOS VÁLIDOS DE CO₂ ===")
-validEntries.forEach((entry, index) => {
-  try {
-    console.log(`\n📦 Entrada #${index + 1}`)
-    console.log("🟡 ID:", entry.id)
-    console.log("🕒 Timestamp:", entry.timestamp)
-    console.log("📆 Fecha:", entry.formattedDate)
-    console.log("⏰ Hora:", entry.formattedTime)
-    console.log("🧬 Base64:", entry.data)
+    console.log("📄 === LISTA DETALLADA DE DATOS VÁLIDOS DE CO₂ ===")
+    validEntries.forEach((entry, index) => {
+      console.log(`\n📦 Entrada #${index + 1}`)
+      console.log("🟡 ID:", entry.id)
+      console.log("🕒 Timestamp:", entry.timestamp)
+      console.log("📆 Fecha:", entry.formattedDate)
+      console.log("⏰ Hora:", entry.formattedTime)
+      console.log("🧬 Base64:", entry.data)
 
-    const binaryString = atob(entry.data)
-    const bytes = Array.from(binaryString).map(c => c.charCodeAt(0))
-    console.log("🧱 Bytes (dec):", bytes)
-    console.log("🧱 Bytes (hex):", bytes.map(b => b.toString(16).padStart(2, "0")))
+      const binaryString = atob(entry.data)
+      const bytes = Array.from(binaryString).map(c => c.charCodeAt(0))
+      console.log("🧱 Bytes (dec):", bytes)
+      console.log("🧱 Bytes (hex):", bytes.map(b => b.toString(16).padStart(2, "0")))
 
-    const floatBytes = bytes.slice(1, 5)
-    const buffer = new ArrayBuffer(4)
-    new Uint8Array(buffer).set(floatBytes)
-    const float = new DataView(buffer).getFloat32(0, false)
-    console.log("🔢 Float32 bruto:", float)
-    console.log("🎯 Valor CO₂ redondeado:", entry.decodedValue, "ppm")
-  } catch (err) {
-    console.error("❌ Error al analizar entrada válida:", entry, err)
-  }
-})
+      const floatBytes = bytes.slice(1, 5)
+      const buffer = new ArrayBuffer(4)
+      new Uint8Array(buffer).set(floatBytes)
+      const float = new DataView(buffer).getFloat32(0, true) // Little Endian
+      console.log("🔢 Float32 bruto:", float)
+      console.log("🎯 Valor CO₂ redondeado:", entry.decodedValue, "ppm")
+    })
 
-
-
-    
     return validEntries
   } catch (error) {
     console.error("❌ Error al obtener datos reales:", error)
@@ -214,7 +188,6 @@ validEntries.forEach((entry, index) => {
   }
 }
 
-// Usa datos reales o simulados según localStorage
 export async function fetchSensorData(): Promise<SensorData[]> {
   const useMockData = localStorage.getItem("useMockData") !== "false"
   console.log("🔧 Configuración: useMockData =", useMockData)
@@ -227,6 +200,7 @@ export async function fetchSensorData(): Promise<SensorData[]> {
       console.log("🌐 Intentando obtener datos reales")
       const realData = await fetchRealData()
       if (realData.length === 0) {
+        console.warn("🚨 Motivo: fetchRealData devolvió 0 entradas válidas")
         throw new Error("No hay datos válidos de CO₂")
       }
       return realData
@@ -237,7 +211,6 @@ export async function fetchSensorData(): Promise<SensorData[]> {
   }
 }
 
-// Calcula promedios por hora
 export function calculateHourlyAverages(data: SensorData[]): { hour: string; average: number }[] {
   const hourlyData: Record<string, number[]> = {}
 
@@ -262,7 +235,6 @@ export function calculateHourlyAverages(data: SensorData[]): { hour: string; ave
   return result
 }
 
-// Filtra datos por fechas
 export function filterDataByDateRange(data: SensorData[], startDate: Date | null, endDate: Date | null): SensorData[] {
   console.log("📅 Filtrando entre fechas:", startDate, "->", endDate)
   if (!startDate || !endDate) return data
