@@ -43,7 +43,7 @@ export function processBase64Data(base64String: string): { isCO2Sensor: boolean;
     view.set(floatBytes)
 
     const dataView = new DataView(buffer)
-    let value = dataView.getFloat32(0, false) // Big Endian
+    value = dataView.getFloat32(0, true)
     console.log("📈 Valor Float32 bruto:", value)
 
     // Validación de rango
