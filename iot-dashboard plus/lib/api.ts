@@ -12,42 +12,49 @@ export interface SensorData {
   dateObj: Date
 }
 
-// Decodifica solo sensores de CO₂ (0x01)
+// ✅ Decodifica correctamente sensores de CO₂ (0x01)
 export function processBase64Data(base64String: string): { isCO2Sensor: boolean; value: number } {
   try {
-    console.log("Decodificando base64:", base64String)
+    console.log("🔍 Decodificando base64:", base64String)
     const binaryString = atob(base64String)
     const bytes = new Uint8Array(binaryString.length)
-
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i)
     }
-
-    console.log("Bytes decodificados:", [...bytes])
+    console.log("🧱 Bytes decodificados:", [...bytes])
 
     const isCO2Sensor = bytes[0] === 0x01
-    let value = 0
+    if (!isCO2Sensor) {
+      console.warn("⚠️ No es sensor CO₂ (bytes[0] !== 0x01):", bytes[0])
+      return { isCO2Sensor: false, value: 0 }
+    }
 
-    if (isCO2Sensor && bytes.length >= 5) {
-      const floatBytes = bytes.slice(1, 5)
-      console.log("Bytes a convertir a Float32:", [...floatBytes])
-      const dataView = new DataView(floatBytes.buffer)
-      value = dataView.getFloat32(0, false) // Big Endian
+    if (bytes.length < 5) {
+      console.warn("⚠️ Datos insuficientes para Float32 (menos de 5 bytes):", bytes.length)
+      return { isCO2Sensor: true, value: 0 }
+    }
 
-      console.log("Valor Float32 bruto:", value)
+    const floatBytes = bytes.slice(1, 5)
+    console.log("🔢 Bytes a convertir a Float32:", [...floatBytes])
 
-      if (!Number.isFinite(value) || value < 0 || value > 10000) {
-        console.warn("⚠️ Valor fuera de rango o inválido:", value)
-        value = 0
-      }
-    } else {
-      if (!isCO2Sensor) console.warn("⚠️ No es sensor CO₂ (bytes[0] != 0x01)")
-      if (bytes.length < 5) console.warn("⚠️ Datos insuficientes (menos de 5 bytes)")
+    // ✅ Alineación de buffer para lectura segura
+    const buffer = new ArrayBuffer(4)
+    const view = new Uint8Array(buffer)
+    view.set(floatBytes)
+
+    const dataView = new DataView(buffer)
+    let value = dataView.getFloat32(0, false) // Big Endian
+    console.log("📈 Valor Float32 bruto:", value)
+
+    // Validación de rango
+    if (!Number.isFinite(value) || value < 0 || value > 10000) {
+      console.warn("❌ Valor fuera de rango o inválido:", value)
+      value = 0
     }
 
     const final = Number.parseFloat(value.toFixed(2))
-    console.log("Valor final redondeado:", final)
-    return { isCO2Sensor, value: final }
+    console.log("✅ Valor final redondeado:", final)
+    return { isCO2Sensor: true, value: final }
   } catch (error) {
     console.error("❌ Error procesando datos Base64:", error)
     return { isCO2Sensor: false, value: 0 }
@@ -111,7 +118,7 @@ export function generateMockData(days = 3): SensorData[] {
 const API_URL = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
 
 // Obtiene datos reales y filtra válidos CO₂
-async function fetchRealData(): Promise<SensorData[]> {
+export async function fetchRealData(): Promise<SensorData[]> {
   try {
     const response = await fetch(API_URL, {
       method: "GET",
