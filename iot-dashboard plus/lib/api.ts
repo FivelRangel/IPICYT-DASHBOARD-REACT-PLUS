@@ -178,13 +178,32 @@ export async function fetchRealData(): Promise<SensorData[]> {
 
     console.log("✅ Total datos válidos de CO₂:", validEntries.length)
 
-// 🔍 Mostrar lista detallada de datos válidos
-console.log("📄 Lista completa de datos válidos de CO₂:")
+console.log("📄 === LISTA DETALLADA DE DATOS VÁLIDOS DE CO₂ ===")
 validEntries.forEach((entry, index) => {
-  console.log(
-    `${index + 1}. Fecha: ${entry.formattedDate} | Hora: ${entry.formattedTime} | Valor CO₂: ${entry.decodedValue} ppm | ID: ${entry.id}`
-  )
+  try {
+    console.log(`\n📦 Entrada #${index + 1}`)
+    console.log("🟡 ID:", entry.id)
+    console.log("🕒 Timestamp:", entry.timestamp)
+    console.log("📆 Fecha:", entry.formattedDate)
+    console.log("⏰ Hora:", entry.formattedTime)
+    console.log("🧬 Base64:", entry.data)
+
+    const binaryString = atob(entry.data)
+    const bytes = Array.from(binaryString).map(c => c.charCodeAt(0))
+    console.log("🧱 Bytes (dec):", bytes)
+    console.log("🧱 Bytes (hex):", bytes.map(b => b.toString(16).padStart(2, "0")))
+
+    const floatBytes = bytes.slice(1, 5)
+    const buffer = new ArrayBuffer(4)
+    new Uint8Array(buffer).set(floatBytes)
+    const float = new DataView(buffer).getFloat32(0, false)
+    console.log("🔢 Float32 bruto:", float)
+    console.log("🎯 Valor CO₂ redondeado:", entry.decodedValue, "ppm")
+  } catch (err) {
+    console.error("❌ Error al analizar entrada válida:", entry, err)
+  }
 })
+
 
 
     
