@@ -19,7 +19,7 @@ export function SensorDashboard() {
   const [hourlyAverages, setHourlyAverages] = useState<{ hour: string; average: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState<Date | null>(addDays(new Date(), -3))
+const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [usingMockData, setUsingMockData] = useState(true)
 
@@ -44,7 +44,6 @@ export function SensorDashboard() {
 
         // Aplicar filtro de fechas inicial
         const filtered = filterDataByDateRange(data, startDate, endDate)
-        setFilteredData(filtered)
 
         // Calcular promedios por hora
         const averages = calculateHourlyAverages(filtered)
