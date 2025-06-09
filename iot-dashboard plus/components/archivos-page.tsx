@@ -145,50 +145,56 @@ export function ArchivosPage() {
               ) : (
                 <ScrollArea className="h-[300px] w-full rounded-md border">
                   <div className="p-4">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left pb-2">Nombre</th>
-                          <th className="text-left pb-2">Tamaño</th>
-                          <th className="text-left pb-2">Fecha</th>
-                          <th className="text-right pb-2">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pdfFiles.map((file) => (
-                          <tr key={file.id} className="border-b">
-                            <td className="py-2 flex items-center">
-                              <File className="mr-2 h-4 w-4" />
-                              {file.name}
-                            </td>
-                            <td className="py-2">{file.size}</td>
-                            <td className="py-2">{file.date}</td>
-                            <td className="py-2 text-right">
-                              <div className="flex justify-end gap-2">
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" onClick={() => handleViewFile(file)}>
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl h-[80vh]">
-                                    <DialogHeader>
-                                      <DialogTitle>{file.name}</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="w-full h-full">
-                                      <iframe src={file.url} className="w-full h-[calc(80vh-80px)]" title={file.name} />
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                                <Button variant="destructive" size="sm" onClick={() => handleDeleteFile(file.id)}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </td>
+                    <div className="w-full overflow-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left pb-2 px-4">Nombre</th>
+                            <th className="text-left pb-2 px-4">Tamaño</th>
+                            <th className="text-left pb-2 px-4">Fecha</th>
+                            <th className="text-right pb-2 px-4">Acciones</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {pdfFiles.map((file) => (
+                            <tr key={file.id} className="border-b">
+                              <td className="py-2 px-4 flex items-center">
+                                <File className="mr-2 h-4 w-4" />
+                                <span className="truncate max-w-[200px]">{file.name}</span>
+                              </td>
+                              <td className="py-2 px-4">{file.size}</td>
+                              <td className="py-2 px-4">{file.date}</td>
+                              <td className="py-2 px-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm" onClick={() => handleViewFile(file)}>
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl h-[80vh]">
+                                      <DialogHeader>
+                                        <DialogTitle>{file.name}</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="w-full h-full">
+                                        <iframe
+                                          src={file.url}
+                                          className="w-full h-[calc(80vh-80px)]"
+                                          title={file.name}
+                                        />
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button variant="destructive" size="sm" onClick={() => handleDeleteFile(file.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </ScrollArea>
               )}
