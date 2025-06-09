@@ -10,5 +10,6 @@ DASHBOARD: https://ipicyt-dashboard-react-plus-production.up.railway.app/
 Datos:
 Reportes / 
 
-ID	Fecha	Hora	CO2 (ppm)	
-5d6c467f-54e5-457a-b60c-ec1a5ab0fb36	20 de abril	2025	23:28	343,21
+| ID                                   | Fecha       | Año  | Hora  | CO2 (ppm) |
+|-------------------------------------|-------------|------|-------|-----------|
+| 5d6c467f-54e5-457a-b60c-ec1a5ab0fb36 | 20 de abril | 2025 | 23:28 | 343,21    |
