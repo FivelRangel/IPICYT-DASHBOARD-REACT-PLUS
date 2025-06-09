@@ -168,7 +168,7 @@ export function InteligenciaArtificialPage() {
         "#": index + 1,
         "Tipo de sensor": dato.tipoSensor,
         "Data preprocesada": dato.dataPreprocesada,
-        "Valor procesado (float)": dato.valorProcesado.toString().replace(",", ".")
+        "Valor procesado (float)": Number(dato.valorProcesado).toFixed(6)
         Fecha: new Date(dato.fecha).toLocaleString("es-ES"),
         "Fecha ISO": dato.fecha,
       }))
