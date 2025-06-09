@@ -40,14 +40,86 @@ export function DatosCrudosPage() {
   const [csvTodos, setCsvTodos] = useState<string | null>(null)
   const [csvMuestra, setCsvMuestra] = useState<string | null>(null)
 
-  // Función para cargar todos los datos
+  // Función para generar datos simulados
+  const generarDatosSimulados = (cantidad: number): DatoSensor[] => {
+    const tiposSensor = [1, 2, 3, 4, 5]
+    const datos: DatoSensor[] = []
+
+    for (let i = 0; i < cantidad; i++) {
+      const tipoSensorId = tiposSensor[Math.floor(Math.random() * tiposSensor.length)]
+      const valor = (Math.random() * 1000).toFixed(6)
+      const fecha = new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString()
+
+      // Crear datos simulados en formato similar al real
+      const sensorIdHex = `0x${tipoSensorId.toString(16).padStart(2, "0").toUpperCase()}`
+      const dataSinProcesar = "AQAAAA==" // Ejemplo de datos en base64
+      const dataPreprocesada = `${tipoSensorId.toString(16).padStart(2, "0").toUpperCase()} 00 00 00 00`
+
+      datos.push({
+        sensorId: sensorIdHex,
+        tipoSensor: TIPOS_SENSOR[tipoSensorId] || "Desconocido",
+        dataSinProcesar,
+        dataPreprocesada,
+        valorProcesado: valor,
+        fecha,
+      })
+    }
+
+    return datos
+  }
+
+  // Función para verificar si estamos en un entorno de previsualización
+  const esEntornoPreview = (): boolean => {
+    if (typeof window !== "undefined") {
+      return (
+        window.location.hostname === "localhost" ||
+        window.location.hostname.includes("vercel.app") ||
+        window.location.hostname.includes("preview")
+      )
+    }
+    return false
+  }
+
+  // Reemplazar la función cargarTodosLosDatos con esta versión mejorada
   const cargarTodosLosDatos = async () => {
     setLoadingTodos(true)
     setErrorTodos(null)
 
     try {
+      // Verificar si estamos en un entorno de previsualización
+      if (esEntornoPreview()) {
+        console.log("Entorno de previsualización detectado, usando datos simulados")
+
+        // Simular un retraso para mostrar el estado de carga
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Generar datos simulados
+        const datosFiltrados = generarDatosSimulados(100)
+        const { csv } = procesarDatosSensores([], TIPOS_SENSOR, datosFiltrados)
+
+        setDatosTodos(datosFiltrados)
+        setResumenTodos({
+          total: 120,
+          errores: 20,
+          validos: datosFiltrados.length,
+        })
+        setCsvTodos(csv)
+
+        setErrorTodos(
+          "Usando datos simulados en el entorno de previsualización. En producción, se conectará a la API real.",
+        )
+        return
+      }
+
       const url = "https://ipicyt-ia-gateway-production.up.railway.app/todos"
-      const response = await fetch(url)
+      console.log("Intentando conectar a:", url)
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`)
@@ -67,20 +139,67 @@ export function DatosCrudosPage() {
       setCsvTodos(csv)
     } catch (error) {
       console.error("Error al cargar todos los datos:", error)
-      setErrorTodos(`Error al cargar los datos: ${error instanceof Error ? error.message : "Error desconocido"}`)
+
+      // Generar datos simulados como fallback
+      const datosFiltrados = generarDatosSimulados(100)
+      const { csv } = procesarDatosSensores([], TIPOS_SENSOR, datosFiltrados)
+
+      setDatosTodos(datosFiltrados)
+      setResumenTodos({
+        total: 120,
+        errores: 20,
+        validos: datosFiltrados.length,
+      })
+      setCsvTodos(csv)
+
+      setErrorTodos(
+        `Error al conectar con la API. Mostrando datos simulados. (${error instanceof Error ? error.message : "Error desconocido"})`,
+      )
     } finally {
       setLoadingTodos(false)
     }
   }
 
-  // Función para cargar muestra de datos
+  // Reemplazar la función cargarMuestraDeDatos con esta versión mejorada
   const cargarMuestraDeDatos = async () => {
     setLoadingMuestra(true)
     setErrorMuestra(null)
 
     try {
+      // Verificar si estamos en un entorno de previsualización
+      if (esEntornoPreview()) {
+        console.log("Entorno de previsualización detectado, usando datos simulados")
+
+        // Simular un retraso para mostrar el estado de carga
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Generar datos simulados
+        const datosFiltrados = generarDatosSimulados(50)
+        const { csv } = procesarDatosSensores([], TIPOS_SENSOR, datosFiltrados)
+
+        setDatosMuestra(datosFiltrados)
+        setResumenMuestra({
+          total: 60,
+          errores: 10,
+          validos: datosFiltrados.length,
+        })
+        setCsvMuestra(csv)
+
+        setErrorMuestra(
+          "Usando datos simulados en el entorno de previsualización. En producción, se conectará a la API real.",
+        )
+        return
+      }
+
       const url = "https://ipicyt-ia-gateway-production.up.railway.app/sensores"
-      const response = await fetch(url)
+      console.log("Intentando conectar a:", url)
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`)
@@ -100,7 +219,22 @@ export function DatosCrudosPage() {
       setCsvMuestra(csv)
     } catch (error) {
       console.error("Error al cargar muestra de datos:", error)
-      setErrorMuestra(`Error al cargar los datos: ${error instanceof Error ? error.message : "Error desconocido"}`)
+
+      // Generar datos simulados como fallback
+      const datosFiltrados = generarDatosSimulados(50)
+      const { csv } = procesarDatosSensores([], TIPOS_SENSOR, datosFiltrados)
+
+      setDatosMuestra(datosFiltrados)
+      setResumenMuestra({
+        total: 60,
+        errores: 10,
+        validos: datosFiltrados.length,
+      })
+      setCsvMuestra(csv)
+
+      setErrorMuestra(
+        `Error al conectar con la API. Mostrando datos simulados. (${error instanceof Error ? error.message : "Error desconocido"})`,
+      )
     } finally {
       setLoadingMuestra(false)
     }
