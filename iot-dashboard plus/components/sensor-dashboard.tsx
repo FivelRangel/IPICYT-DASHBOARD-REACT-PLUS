@@ -19,7 +19,7 @@ export function SensorDashboard() {
   const [hourlyAverages, setHourlyAverages] = useState<{ hour: string; average: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-const [startDate, setStartDate] = useState<Date | null>(null)
+  const [startDate, setStartDate] = useState<Date | null>(addDays(new Date(), -3))
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [usingMockData, setUsingMockData] = useState(true)
 
@@ -44,6 +44,7 @@ const [startDate, setStartDate] = useState<Date | null>(null)
 
         // Aplicar filtro de fechas inicial
         const filtered = filterDataByDateRange(data, startDate, endDate)
+        setFilteredData(filtered)
 
         // Calcular promedios por hora
         const averages = calculateHourlyAverages(filtered)
@@ -75,17 +76,15 @@ const [startDate, setStartDate] = useState<Date | null>(null)
   }, []) // Dependencias vacías para ejecutar solo al montar
 
   // Efecto separado para manejar cambios en fechas o datos
-useEffect(() => {
-  if (sensorData.length > 0) {
-    const filtered = filterDataByDateRange(sensorData, startDate, endDate)
-    const sorted = [...filtered].sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-    setFilteredData(sorted)
+  useEffect(() => {
+    if (sensorData.length > 0) {
+      const filtered = filterDataByDateRange(sensorData, startDate, endDate)
+      setFilteredData(filtered)
 
-    const averages = calculateHourlyAverages(sorted)
-    setHourlyAverages(averages)
-  }
-}, [startDate, endDate, sensorData])
-
+      const averages = calculateHourlyAverages(filtered)
+      setHourlyAverages(averages)
+    }
+  }, [startDate, endDate, sensorData])
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setStartDate(start)
@@ -120,8 +119,13 @@ useEffect(() => {
   if (filteredData.length === 0 && !loading) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateRangeChange} />
+        <div className="flex flex-col lg:flex-row justify-between gap-4">
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={handleDateRangeChange}
+            className="flex-1 min-w-[280px]"
+          />
           <Button variant="outline" onClick={fetchData}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Actualizar datos
@@ -151,9 +155,14 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateRangeChange} />
+      <div className="flex flex-col lg:flex-row justify-between gap-4">
+        <div className="flex flex-col md:flex-row gap-4 flex-1">
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={handleDateRangeChange}
+            className="flex-1 min-w-[280px]"
+          />
 
           {usingMockData && (
             <Alert variant="warning" className="max-w-md py-2">
@@ -223,3 +232,4 @@ useEffect(() => {
     </div>
   )
 }
+
