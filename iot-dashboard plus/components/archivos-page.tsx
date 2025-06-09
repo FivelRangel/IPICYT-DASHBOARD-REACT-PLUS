@@ -2,97 +2,111 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Upload, File, Trash2, Eye } from "lucide-react"
+import { Upload, File, Trash2, Eye, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-
-interface PDFFile {
-  id: string
-  name: string
-  size: string
-  date: string
-  url: string
-}
+import { fileStorage, type StoredFile } from "@/lib/file-storage"
+import { useToast } from "@/hooks/use-toast"
 
 export function ArchivosPage() {
-  const [pdfFiles, setPdfFiles] = useState<PDFFile[]>([
-    {
-      id: "1",
-      name: "Reporte-Enero-2023.pdf",
-      size: "1.2 MB",
-      date: "15/01/2023",
-      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    },
-    {
-      id: "2",
-      name: "Reporte-Febrero-2023.pdf",
-      size: "0.8 MB",
-      date: "10/02/2023",
-      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    },
-  ])
-  const [selectedPdf, setSelectedPdf] = useState<PDFFile | null>(null)
+  const [pdfFiles, setPdfFiles] = useState<StoredFile[]>([])
+  const [selectedPdf, setSelectedPdf] = useState<StoredFile | null>(null)
+  const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Cargar archivos al iniciar
+  useEffect(() => {
+    loadFiles()
+  }, [])
+
+  const loadFiles = () => {
+    const files = fileStorage.getAllFiles()
+    setPdfFiles(files)
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const newFiles: PDFFile[] = []
+    setUploading(true)
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (file.type === "application/pdf") {
-        // Crear URL para el archivo
-        const url = URL.createObjectURL(file)
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
 
-        // Formatear tamaño
-        const sizeInMB = (file.size / (1024 * 1024)).toFixed(2)
+        if (file.type !== "application/pdf") {
+          toast({
+            title: "Error",
+            description: `El archivo "${file.name}" no es un PDF válido.`,
+            variant: "destructive",
+          })
+          continue
+        }
 
-        // Formatear fecha
-        const today = new Date()
-        const date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`
-
-        newFiles.push({
-          id: `file-${Date.now()}-${i}`,
-          name: file.name,
-          size: `${sizeInMB} MB`,
-          date: date,
-          url: url,
-        })
+        await fileStorage.uploadFile(file)
       }
-    }
 
-    setPdfFiles([...pdfFiles, ...newFiles])
+      loadFiles()
 
-    // Limpiar input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      toast({
+        title: "Archivos subidos",
+        description: `Se subieron ${files.length} archivo(s) correctamente.`,
+      })
+
+      // Limpiar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Error al subir archivos: ${error instanceof Error ? error.message : "Error desconocido"}`,
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
     }
   }
 
   const handleDeleteFile = (id: string) => {
-    setPdfFiles(pdfFiles.filter((file) => file.id !== id))
-    if (selectedPdf && selectedPdf.id === id) {
-      setSelectedPdf(null)
+    const success = fileStorage.deleteFile(id)
+
+    if (success) {
+      loadFiles()
+
+      if (selectedPdf && selectedPdf.id === id) {
+        setSelectedPdf(null)
+      }
+
+      toast({
+        title: "Archivo eliminado",
+        description: "El archivo se eliminó correctamente.",
+      })
+    } else {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el archivo.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleViewFile = (file: PDFFile) => {
+  const handleViewFile = (file: StoredFile) => {
     setSelectedPdf(file)
   }
 
   return (
-    <div className="flex flex-col p-6 gap-6 w-full">
+    <div className="flex flex-col p-4 md:p-6 gap-6 w-full max-w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Archivos PDF</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Archivos PDF</h1>
         <p className="text-muted-foreground">Almacenamiento y visualización de reportes PDF</p>
       </div>
 
@@ -119,14 +133,18 @@ export function ArchivosPage() {
                     accept="application/pdf"
                     onChange={handleFileUpload}
                     multiple
+                    disabled={uploading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Solo se permiten archivos PDF. Puedes seleccionar múltiples archivos.
+                  </p>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button onClick={() => fileInputRef.current?.click()}>
+              <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                 <Upload className="mr-2 h-4 w-4" />
-                Subir archivo
+                {uploading ? "Subiendo..." : "Subir archivo"}
               </Button>
             </CardFooter>
           </Card>
@@ -139,42 +157,46 @@ export function ArchivosPage() {
             <CardContent>
               {pdfFiles.length === 0 ? (
                 <Alert>
+                  <AlertCircle className="h-4 w-4" />
                   <AlertTitle>No hay archivos</AlertTitle>
                   <AlertDescription>No se han subido archivos PDF. Sube un archivo para comenzar.</AlertDescription>
                 </Alert>
               ) : (
-                <ScrollArea className="h-[300px] w-full rounded-md border">
+                <ScrollArea className="h-[400px] w-full rounded-md border">
                   <div className="p-4">
                     <div className="w-full overflow-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left pb-2 px-4">Nombre</th>
-                            <th className="text-left pb-2 px-4">Tamaño</th>
-                            <th className="text-left pb-2 px-4">Fecha</th>
-                            <th className="text-right pb-2 px-4">Acciones</th>
+                            <th className="text-left pb-2 px-2 md:px-4">Nombre</th>
+                            <th className="text-left pb-2 px-2 md:px-4">Tamaño</th>
+                            <th className="text-left pb-2 px-2 md:px-4 hidden md:table-cell">Fecha</th>
+                            <th className="text-right pb-2 px-2 md:px-4">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
                           {pdfFiles.map((file) => (
                             <tr key={file.id} className="border-b">
-                              <td className="py-2 px-4 flex items-center">
-                                <File className="mr-2 h-4 w-4" />
-                                <span className="truncate max-w-[200px]">{file.name}</span>
+                              <td className="py-2 px-2 md:px-4 flex items-center">
+                                <File className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span className="truncate max-w-[150px] md:max-w-[200px]">{file.name}</span>
                               </td>
-                              <td className="py-2 px-4">{file.size}</td>
-                              <td className="py-2 px-4">{file.date}</td>
-                              <td className="py-2 px-4 text-right">
-                                <div className="flex justify-end gap-2">
+                              <td className="py-2 px-2 md:px-4">{fileStorage.formatFileSize(file.size)}</td>
+                              <td className="py-2 px-2 md:px-4 hidden md:table-cell">
+                                {file.uploadDate.toLocaleDateString("es-ES")}
+                              </td>
+                              <td className="py-2 px-2 md:px-4 text-right">
+                                <div className="flex justify-end gap-1 md:gap-2">
                                   <Dialog>
                                     <DialogTrigger asChild>
                                       <Button variant="outline" size="sm" onClick={() => handleViewFile(file)}>
                                         <Eye className="h-4 w-4" />
+                                        <span className="hidden md:inline ml-1">Ver</span>
                                       </Button>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-4xl h-[80vh]">
                                       <DialogHeader>
-                                        <DialogTitle>{file.name}</DialogTitle>
+                                        <DialogTitle className="truncate">{file.name}</DialogTitle>
                                       </DialogHeader>
                                       <div className="w-full h-full">
                                         <iframe
@@ -187,6 +209,7 @@ export function ArchivosPage() {
                                   </Dialog>
                                   <Button variant="destructive" size="sm" onClick={() => handleDeleteFile(file.id)}>
                                     <Trash2 className="h-4 w-4" />
+                                    <span className="hidden md:inline ml-1">Eliminar</span>
                                   </Button>
                                 </div>
                               </td>
@@ -216,11 +239,14 @@ export function ArchivosPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] border rounded-md">
                   <File className="h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Selecciona un archivo para visualizarlo</p>
+                  <p className="text-muted-foreground text-center">Selecciona un archivo para visualizarlo</p>
                   <Button
                     variant="outline"
                     className="mt-4"
-                    onClick={() => document.getElementById("files-tab")?.click()}
+                    onClick={() => {
+                      const filesTab = document.querySelector('[data-state="inactive"]') as HTMLElement
+                      if (filesTab) filesTab.click()
+                    }}
                   >
                     Ir a archivos
                   </Button>
