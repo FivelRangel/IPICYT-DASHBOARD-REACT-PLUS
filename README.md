@@ -5,3 +5,10 @@ Deploy https://railway.com/project/63957b3a-87e9-4518-900a-969b4fc32121/service/
 Github https://github.com/FivelRangel/IPICYT-DASHBOARD-REACT-PLUS
 
 DASHBOARD: https://ipicyt-dashboard-react-plus-production.up.railway.app/
+
+
+Datos:
+Reportes / 
+
+ID	Fecha	Hora	CO2 (ppm)	
+5d6c467f-54e5-457a-b60c-ec1a5ab0fb36	20 de abril	2025	23:28	343,21
