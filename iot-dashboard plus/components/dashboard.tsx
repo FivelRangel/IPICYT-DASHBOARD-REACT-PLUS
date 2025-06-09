@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar"
-import { MoonStar, Sun, BarChart3, Home, Settings, FileText, FolderOpen } from "lucide-react"
+import { MoonStar, Sun, BarChart3, Home, Settings, FileText, FolderOpen, Database } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
@@ -37,6 +37,11 @@ export function Dashboard({ children }: { children: React.ReactNode }) {
       title: "Reportes",
       icon: FileText,
       href: "/reportes",
+    },
+    {
+      title: "Datos en Crudo",
+      icon: Database,
+      href: "/datos-crudos",
     },
     {
       title: "Archivos PDF",
