@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Info, Save, Check } from "lucide-react"
+import { Info, Save, Check, Palette } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 
 export function ConfiguracionPage() {
   const [useMockData, setUseMockData] = useState(true)
   const [saved, setSaved] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   // Cargar la configuración al iniciar
   useEffect(() => {
@@ -68,23 +70,30 @@ export function ConfiguracionPage() {
     }, 100)
   }
 
+  const handleThemeChange = (isDark: boolean) => {
+    setTheme(isDark ? "dark" : "light")
+  }
+
   return (
-    <div className="flex flex-col p-6 gap-6 w-full">
+    <div className="flex flex-col p-4 md:p-6 gap-6 w-full max-w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Configuración</h1>
         <p className="text-muted-foreground">Personaliza el comportamiento del dashboard</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Fuente de datos</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              Fuente de datos
+            </CardTitle>
             <CardDescription>Configura el origen de los datos para el dashboard</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col space-y-4">
               <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="mock-data" className="flex flex-col space-y-1">
+                <Label htmlFor="mock-data" className="flex flex-col space-y-1 flex-1">
                   <span>Usar datos simulados</span>
                   <span className="font-normal text-sm text-muted-foreground">
                     Activa esta opción para usar datos generados localmente
@@ -117,19 +126,22 @@ export function ConfiguracionPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Apariencia</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Apariencia
+            </CardTitle>
             <CardDescription>Personaliza la apariencia del dashboard</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col space-y-4">
               <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="theme-mode" className="flex flex-col space-y-1">
+                <Label htmlFor="theme-mode" className="flex flex-col space-y-1 flex-1">
                   <span>Modo oscuro</span>
                   <span className="font-normal text-sm text-muted-foreground">
                     Activa esta opción para usar el tema oscuro
                   </span>
                 </Label>
-                <Switch id="theme-mode" />
+                <Switch id="theme-mode" checked={theme === "dark"} onCheckedChange={handleThemeChange} />
               </div>
 
               <Alert>
@@ -147,6 +159,30 @@ export function ConfiguracionPage() {
               Guardar preferencias
             </Button>
           </CardFooter>
+        </Card>
+
+        {/* Card adicional para información del sistema */}
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Información del sistema</CardTitle>
+            <CardDescription>Detalles sobre el estado actual del dashboard</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col space-y-1">
+                <span className="text-sm font-medium">Versión</span>
+                <span className="text-sm text-muted-foreground">v1.0.0</span>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <span className="text-sm font-medium">Última actualización</span>
+                <span className="text-sm text-muted-foreground">{new Date().toLocaleDateString("es-ES")}</span>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <span className="text-sm font-medium">Estado</span>
+                <span className="text-sm text-green-600">Operativo</span>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>
