@@ -81,9 +81,9 @@ export function ReportesPage() {
 
   if (loading && sensorData.length === 0) {
     return (
-      <div className="flex flex-col p-6 gap-6 w-full">
+      <div className="flex flex-col p-4 md:p-6 gap-6 w-full max-w-full">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reportes</h1>
           <p className="text-muted-foreground">Generación y descarga de reportes de CO₂</p>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -95,9 +95,9 @@ export function ReportesPage() {
   }
 
   return (
-    <div className="flex flex-col p-6 gap-6 w-full">
+    <div className="flex flex-col p-4 md:p-6 gap-6 w-full max-w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reportes</h1>
         <p className="text-muted-foreground">Generación y descarga de reportes de CO₂</p>
       </div>
 
@@ -115,9 +115,14 @@ export function ReportesPage() {
         </Alert>
       ) : (
         <div className="space-y-6">
-          <div className="flex flex-col md:flex-row justify-between gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateRangeChange} />
+          <div className="flex flex-col lg:flex-row justify-between gap-4">
+            <div className="flex flex-col md:flex-row gap-4 flex-1">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={handleDateRangeChange}
+                className="flex-1 min-w-[280px]"
+              />
 
               {usingMockData && (
                 <Alert variant="warning" className="max-w-md py-2">
