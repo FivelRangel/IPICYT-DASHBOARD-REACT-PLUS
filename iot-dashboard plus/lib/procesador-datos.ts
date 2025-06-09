@@ -42,7 +42,8 @@ function bytesToFloat(bytes: Uint8Array, offset = 0): number {
   }
 
   // Leer el float en formato big-endian
-  return view.getFloat32(0, false) // false para big-endian
+  return view.getFloat32(0, true)
+  
 }
 
 // Función para convertir bytes a representación hexadecimal
