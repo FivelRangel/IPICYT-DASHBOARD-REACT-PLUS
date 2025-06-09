@@ -52,11 +52,18 @@ function bytesToHex(bytes: Uint8Array): string {
     .join(" ")
 }
 
-// Función principal para procesar los datos de sensores
+// Modificar la función procesarDatosSensores para aceptar datos simulados
 export function procesarDatosSensores(
   data: any[],
   tiposSensor: Record<number, string>,
+  datosSimulados?: DatoSensor[],
 ): { datosFiltrados: DatoSensor[]; errores: number; csv: string } {
+  // Si se proporcionan datos simulados, usarlos directamente
+  if (datosSimulados && datosSimulados.length > 0) {
+    const csv = generarCSV(datosSimulados, data.length || 60, data.length ? 0 : 10)
+    return { datosFiltrados: datosSimulados, errores: data.length ? 0 : 10, csv }
+  }
+
   const datosFiltrados: DatoSensor[] = []
   let errores = 0
 
