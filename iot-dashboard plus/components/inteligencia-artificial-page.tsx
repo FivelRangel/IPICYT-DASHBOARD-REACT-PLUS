@@ -146,7 +146,7 @@ export function InteligenciaArtificialPage() {
       })
 
       setError(
-        `Error al conectar con la API. Mostrando datos simulados de CO₂. (${error instanceof Error ? error.message : "Error desconocido"})`,
+        `Error al conectar con la API.Mostrando datos simulados de CO₂. (${error instanceof Error ? error.message : "Error desconocido"})`,
       )
     } finally {
       setLoading(false)
